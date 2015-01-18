@@ -13,8 +13,8 @@
 
   <dependencies>
     <dependency>
-            <groupId>com.jd.redis</groupId>
-            <artifactId>jd-redis-client</artifactId>
+            <groupId>com.nio.redis</groupId>
+            <artifactId>nio-redis-client</artifactId>
             <version>0.0.1-SNAPSHOT</version>
     </dependency>
     <dependency>

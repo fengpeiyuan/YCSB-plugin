@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 import java.util.Vector;
-import com.jd.redis.framework.client.JdRedisShardClient;
+import com.nio.redis.framework.client.RedisShardClient;
 import com.yahoo.ycsb.ByteIterator;
 import com.yahoo.ycsb.DB;
 import com.yahoo.ycsb.DBException;
@@ -13,7 +13,7 @@ import com.yahoo.ycsb.StringByteIterator;
 
 public class RedisShardNioClient extends DB {
 
-    private JdRedisShardClient jdRedisShardClient;
+    private RedisShardClient redisShardClient;
     public static final String CONN_PROPERTY = "redis.conn.str";
     public static final String INDEX_KEY = "_indices";
     
@@ -23,13 +23,13 @@ public class RedisShardNioClient extends DB {
         if (redisConnString == null) {
             return;
         }
-        jdRedisShardClient = new JdRedisShardClient(redisConnString);
-        jdRedisShardClient.init();
+        redisShardClient = new RedisShardClient(redisConnString);
+        redisShardClient.init();
     }
 
     public void cleanup() throws DBException {
     	try {
-			jdRedisShardClient.destroy();
+			redisShardClient.destroy();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -44,11 +44,11 @@ public class RedisShardNioClient extends DB {
             HashMap<String, ByteIterator> result) {
     	try{
 	        if (fields == null) {
-	            StringByteIterator.putAllAsByteIterators(result, jdRedisShardClient.hgetall(key));
+	            StringByteIterator.putAllAsByteIterators(result, redisShardClient.hgetall(key));
 	        }
 	        else {
 	            String[] fieldArray = (String[])fields.toArray(new String[fields.size()]);
-	            List<String> values = jdRedisShardClient.hmget(key, fieldArray);
+	            List<String> values = redisShardClient.hmget(key, fieldArray);
 	
 	            Iterator<String> fieldIterator = fields.iterator();
 	            Iterator<String> valueIterator = values.iterator();
@@ -69,8 +69,8 @@ public class RedisShardNioClient extends DB {
     @Override
     public int insert(String table, String key, HashMap<String, ByteIterator> values) {
     	try{
-	        if (jdRedisShardClient.hmset(key, StringByteIterator.getStringMap(values)).equals("OK")) {
-	        	jdRedisShardClient.zadd(INDEX_KEY, hash(key), key);
+	        if (redisShardClient.hmset(key, StringByteIterator.getStringMap(values)).equals("OK")) {
+	        	redisShardClient.zadd(INDEX_KEY, hash(key), key);
 	            return 0;
 	        }
 	        return 1;
@@ -83,8 +83,8 @@ public class RedisShardNioClient extends DB {
     @Override
     public int delete(String table, String key) {
     	try{
-	        return jdRedisShardClient.del(key) == 0
-	            && jdRedisShardClient.zrem(INDEX_KEY, key) == 0
+	        return redisShardClient.del(key) == 0
+	            && redisShardClient.zrem(INDEX_KEY, key) == 0
 	               ? 1 : 0;
     	}catch(Exception e){
     		e.printStackTrace();
@@ -95,7 +95,7 @@ public class RedisShardNioClient extends DB {
     @Override
     public int update(String table, String key, HashMap<String, ByteIterator> values) {
         try {
-			return jdRedisShardClient.hmset(key, StringByteIterator.getStringMap(values)).equals("OK") ? 0 : 1;
+			return redisShardClient.hmset(key, StringByteIterator.getStringMap(values)).equals("OK") ? 0 : 1;
 		} catch (Exception e) {
 			e.printStackTrace();
 			return 1;
@@ -105,7 +105,7 @@ public class RedisShardNioClient extends DB {
     @Override
     public int scan(String table, String startkey, int recordcount,Set<String> fields, Vector<HashMap<String, ByteIterator>> result) {
     	 try {
-	    	List<String> keys = jdRedisShardClient.zrangebyscore(INDEX_KEY, String.valueOf(hash(startkey)),String.valueOf(Double.POSITIVE_INFINITY), 0, recordcount);
+	    	List<String> keys = redisShardClient.zrangebyscore(INDEX_KEY, String.valueOf(hash(startkey)),String.valueOf(Double.POSITIVE_INFINITY), 0, recordcount);
 	        HashMap<String, ByteIterator> values;
 	        for (String key : keys) {
 	            values = new HashMap<String, ByteIterator>();
